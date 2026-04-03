@@ -47,6 +47,14 @@
     "scale": 0.16,
     "enable": true,
     "hideEmptyRows": true,
+    "useWorkspaceMap": false,
+    "workspaceMap": [0, 10],
+    "orderRightLeft": false,
+    "orderBottomUp": false,
+    "previewsEnabled": true,
+    "previewMode": "live",
+    "includeInactiveMonitorPreviews": true,
+    "previewRecaptureDelayMs": 60,
     "workspaceSpacing": 5,
     "backgroundPadding": 10,
     "workspaceNumberBaseSize": 250
@@ -61,6 +69,7 @@
     "inactiveMonitorOpacity": 0.4
   },
   "hacks": {
-    "arbitraryRaceConditionDelay": 150
+    "arbitraryRaceConditionDelay": 150,
+    "hyprlandEventDebounceMs": 40
   }
 }

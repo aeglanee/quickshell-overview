@@ -109,6 +109,14 @@ Singleton {
             property real scale: root.readReal("overview.scale", 0.16)
             property bool enable: root.readBool("overview.enable", true)
             property bool hideEmptyRows: root.readBool("overview.hideEmptyRows", true)
+            property bool useWorkspaceMap: root.readBool("overview.useWorkspaceMap", false)
+            property var workspaceMap: root.read("overview.workspaceMap", [])
+            property bool orderRightLeft: root.readBool("overview.orderRightLeft", false)
+            property bool orderBottomUp: root.readBool("overview.orderBottomUp", false)
+            property bool previewsEnabled: root.readBool("overview.previewsEnabled", true)
+            property string previewMode: root.readString("overview.previewMode", "live")
+            property bool includeInactiveMonitorPreviews: root.readBool("overview.includeInactiveMonitorPreviews", true)
+            property int previewRecaptureDelayMs: root.readInt("overview.previewRecaptureDelayMs", 60)
             property real workspaceSpacing: root.readReal("overview.workspaceSpacing", 5)
             property real backgroundPadding: root.readReal("overview.backgroundPadding", 10)
             property real workspaceNumberBaseSize: root.readReal("overview.workspaceNumberBaseSize", 250)
@@ -127,6 +135,7 @@ Singleton {
 
         property QtObject hacks: QtObject {
             property int arbitraryRaceConditionDelay: root.readInt("hacks.arbitraryRaceConditionDelay", 150)
+            property int hyprlandEventDebounceMs: root.readInt("hacks.hyprlandEventDebounceMs", 40)
         }
     }
 

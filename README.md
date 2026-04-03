@@ -178,6 +178,14 @@ Edit `~/.config/quickshell/overview/config.json`:
     "scale": 0.16,
     "enable": true,
     "hideEmptyRows": true,
+    "useWorkspaceMap": false,
+    "workspaceMap": [0, 10],
+    "orderRightLeft": false,
+    "orderBottomUp": false,
+    "previewsEnabled": true,
+    "previewMode": "live",
+    "includeInactiveMonitorPreviews": true,
+    "previewRecaptureDelayMs": 60,
     "workspaceSpacing": 5,
     "backgroundPadding": 10,
     "workspaceNumberBaseSize": 250
@@ -189,6 +197,9 @@ Edit `~/.config/quickshell/overview/config.json`:
 - **Too small?** Increase `scale` (try 0.20 or 0.25)
 - **Too big?** Decrease `scale` (try 0.12 or 0.14)
 - **More workspaces?** Change `rows` and `columns` (e.g., 3 rows × 4 columns = 12 workspaces)
+- **Reverse order?** Set `orderRightLeft` and/or `orderBottomUp` to `true`
+- **Per-monitor workspace groups?** Enable `useWorkspaceMap` and set `workspaceMap` (e.g. `[0,10]`)
+- **Lower memory use?** Set `previewMode` to `event` and `includeInactiveMonitorPreviews` to `false`
 
 **Hide empty workspace rows:**
 - Set `hideEmptyRows: true` to automatically hide rows that have no windows
@@ -220,6 +231,42 @@ Increase `topMargin` to move the overview down. Decrease it to move up.
     "iconToWindowRatioCompact": 0.45,
     "xwaylandIndicatorToIconRatio": 0.35,
     "inactiveMonitorOpacity": 0.4
+  }
+}
+```
+
+### Performance Tuning
+
+```json
+{
+  "overview": {
+    "previewsEnabled": true,
+    "previewMode": "live",
+    "includeInactiveMonitorPreviews": true,
+    "previewRecaptureDelayMs": 60
+  },
+  "hacks": {
+    "hyprlandEventDebounceMs": 40
+  }
+}
+```
+
+- `overview.previewsEnabled`: turn all window screencopy previews on/off
+- `overview.previewMode`: `live` (best visuals, more RAM) or `event` (lower RAM, refreshes on window events)
+- `overview.includeInactiveMonitorPreviews`: when `false`, only current monitor windows get preview capture
+- `overview.previewRecaptureDelayMs`: delay used for event-mode snapshot refresh (lower = faster updates)
+- `hacks.hyprlandEventDebounceMs`: coalesces Hyprland event refreshes to reduce command churn
+
+Low-memory preset:
+
+```json
+{
+  "overview": {
+    "previewMode": "event",
+    "includeInactiveMonitorPreviews": false
+  },
+  "hacks": {
+    "hyprlandEventDebounceMs": 80
   }
 }
 ```
@@ -276,6 +323,14 @@ Increase `topMargin` to move the overview down. Decrease it to move up.
     "scale": 0.16,
     "enable": true,
     "hideEmptyRows": true,
+    "useWorkspaceMap": false,
+    "workspaceMap": [0, 10],
+    "orderRightLeft": false,
+    "orderBottomUp": false,
+    "previewsEnabled": true,
+    "previewMode": "live",
+    "includeInactiveMonitorPreviews": true,
+    "previewRecaptureDelayMs": 60,
     "workspaceSpacing": 5,
     "backgroundPadding": 10,
     "workspaceNumberBaseSize": 250
@@ -290,7 +345,8 @@ Increase `topMargin` to move the overview down. Decrease it to move up.
     "inactiveMonitorOpacity": 0.4
   },
   "hacks": {
-    "arbitraryRaceConditionDelay": 150
+    "arbitraryRaceConditionDelay": 150,
+    "hyprlandEventDebounceMs": 40
   }
 }
 ```
@@ -429,6 +485,12 @@ qs ipc -c overview call overview close
 
 - Window icons may fallback to generic icon if app class name doesn't match icon theme
 - Potential crashes during rapid window state changes due to Wayland screencopy buffer management
+
+## 💖 Support
+
+If this project helps your setup and you want to support continued maintenance, you can sponsor here:
+
+https://github.com/sponsors/Shanu-Kumawat
 
 ##  Credits
 

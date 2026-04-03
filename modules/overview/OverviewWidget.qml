@@ -14,8 +14,12 @@ Item {
     required property var panelWindow
     readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
     readonly property var toplevels: ToplevelManager.toplevels
+    readonly property int effectiveActiveWorkspaceId: Math.max(1, Math.min(100, monitor?.activeWorkspace?.id ?? 1))
     readonly property int workspacesShown: Config.options.overview.rows * Config.options.overview.columns
-    readonly property int workspaceGroup: Math.floor((monitor.activeWorkspace?.id - 1) / workspacesShown)
+    readonly property bool useWorkspaceMap: Config.options.overview.useWorkspaceMap
+    readonly property var workspaceMap: Config.options.overview.workspaceMap
+    readonly property int workspaceOffset: useWorkspaceMap ? Number(workspaceMap[root.monitor?.id] ?? 0) : 0
+    readonly property int workspaceGroup: Math.floor((effectiveActiveWorkspaceId - workspaceOffset - 1) / workspacesShown)
     property bool monitorIsFocused: (Hyprland.focusedMonitor?.name == monitor.name)
     property var windows: HyprlandData.windowList
     property var windowByAddress: HyprlandData.windowByAddress
@@ -40,19 +44,42 @@ Item {
 
     property int draggingFromWorkspace: -1
     property int draggingTargetWorkspace: -1
+    property int previewRecaptureToken: 0
+
+    function getWorkspaceRow(workspaceId) {
+        if (!Number.isFinite(workspaceId))
+            return 0;
+        const adjusted = workspaceId - workspaceOffset;
+        const normalRow = Math.floor((adjusted - 1) / Config.options.overview.columns) % Config.options.overview.rows;
+        return Config.options.overview.orderBottomUp ? (Config.options.overview.rows - normalRow - 1) : normalRow;
+    }
+
+    function getWorkspaceColumn(workspaceId) {
+        if (!Number.isFinite(workspaceId))
+            return 0;
+        const adjusted = workspaceId - workspaceOffset;
+        const normalCol = (adjusted - 1) % Config.options.overview.columns;
+        return Config.options.overview.orderRightLeft ? (Config.options.overview.columns - normalCol - 1) : normalCol;
+    }
+
+    function getWorkspaceInCell(rowIndex, colIndex) {
+        const mappedRow = Config.options.overview.orderBottomUp ? (Config.options.overview.rows - rowIndex - 1) : rowIndex;
+        const mappedCol = Config.options.overview.orderRightLeft ? (Config.options.overview.columns - colIndex - 1) : colIndex;
+        return (workspaceGroup * workspacesShown) + (mappedRow * Config.options.overview.columns) + mappedCol + 1 + workspaceOffset;
+    }
 
     // Calculate which rows have windows or current workspace
     property var rowsWithContent: {
         if (!Config.options.overview.hideEmptyRows) return null;
         
         let rows = new Set();
-        const firstWorkspace = root.workspaceGroup * root.workspacesShown + 1;
-        const lastWorkspace = (root.workspaceGroup + 1) * root.workspacesShown;
+        const firstWorkspace = root.workspaceGroup * root.workspacesShown + 1 + workspaceOffset;
+        const lastWorkspace = (root.workspaceGroup + 1) * root.workspacesShown + workspaceOffset;
         
         // Add row containing current workspace
-        const currentWorkspace = monitor.activeWorkspace?.id ?? 1;
+        const currentWorkspace = effectiveActiveWorkspaceId;
         if (currentWorkspace >= firstWorkspace && currentWorkspace <= lastWorkspace) {
-            rows.add(Math.floor((currentWorkspace - firstWorkspace) / Config.options.overview.columns));
+            rows.add(getWorkspaceRow(currentWorkspace));
         }
         
         // Add rows with windows
@@ -60,7 +87,7 @@ Item {
             const win = windowByAddress[addr];
             const wsId = win?.workspace?.id;
             if (wsId >= firstWorkspace && wsId <= lastWorkspace) {
-                const rowIndex = Math.floor((wsId - firstWorkspace) / Config.options.overview.columns);
+                const rowIndex = getWorkspaceRow(wsId);
                 rows.add(rowIndex);
             }
         }
@@ -73,6 +100,19 @@ Item {
 
     property Component windowComponent: OverviewWindow {}
     property list<OverviewWindow> windowWidgets: []
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (!GlobalStates.overviewOpen)
+                return;
+
+            const eventName = `${event?.name ?? event?.event ?? event?.type ?? ""}`;
+            if (eventName === "closewindow" || eventName === "openwindow" || eventName === "movewindow") {
+                root.previewRecaptureToken += 1;
+            }
+        }
+    }
 
     StyledRectangularShadow {
         target: overviewBackground
@@ -111,7 +151,7 @@ Item {
                         Rectangle { // Workspace
                             id: workspace
                             property int colIndex: index
-                            property int workspaceValue: root.workspaceGroup * workspacesShown + rowIndex * Config.options.overview.columns + colIndex + 1
+                            property int workspaceValue: root.getWorkspaceInCell(rowIndex, colIndex)
                             property color defaultWorkspaceColor: Appearance.colors.colLayer1
                             property color hoveredWorkspaceColor: ColorUtils.mix(defaultWorkspaceColor, Appearance.colors.colLayer1Hover, 0.1)
                             property color hoveredBorderColor: Appearance.colors.colLayer2Hover
@@ -180,7 +220,9 @@ Item {
                         return ToplevelManager.toplevels.values.filter((toplevel) => {
                             const address = `0x${toplevel.HyprlandToplevel.address}`
                             var win = windowByAddress[address]
-                            const inWorkspaceGroup = (root.workspaceGroup * root.workspacesShown < win?.workspace?.id && win?.workspace?.id <= (root.workspaceGroup + 1) * root.workspacesShown)
+                            const minWorkspace = root.workspaceGroup * root.workspacesShown + 1 + workspaceOffset;
+                            const maxWorkspace = (root.workspaceGroup + 1) * root.workspacesShown + workspaceOffset;
+                            const inWorkspaceGroup = (minWorkspace <= win?.workspace?.id && win?.workspace?.id <= maxWorkspace)
                             return inWorkspaceGroup;
                         }).sort((a, b) => {
                             // Proper stacking order based on Hyprland's window properties
@@ -215,29 +257,17 @@ Item {
                     windowData: windowByAddress[address]
                     toplevel: modelData
                     monitorData: monitor
-                    
-                    // Calculate scale relative to window's source monitor
-                    property real sourceMonitorWidth: (monitor?.transform % 2 === 1) ? 
-                        (monitor?.height ?? 1920) / (monitor?.scale ?? 1) - (monitor?.reserved?.[0] ?? 0) - (monitor?.reserved?.[2] ?? 0) :
-                        (monitor?.width ?? 1920) / (monitor?.scale ?? 1) - (monitor?.reserved?.[0] ?? 0) - (monitor?.reserved?.[2] ?? 0)
-                    property real sourceMonitorHeight: (monitor?.transform % 2 === 1) ?
-                        (monitor?.width ?? 1080) / (monitor?.scale ?? 1) - (monitor?.reserved?.[1] ?? 0) - (monitor?.reserved?.[3] ?? 0) :
-                        (monitor?.height ?? 1080) / (monitor?.scale ?? 1) - (monitor?.reserved?.[1] ?? 0) - (monitor?.reserved?.[3] ?? 0)
-                    
-                    // Scale windows to fit the workspace size, accounting for different monitor sizes
-                    scale: Math.min(
-                        root.workspaceImplicitWidth / sourceMonitorWidth,
-                        root.workspaceImplicitHeight / sourceMonitorHeight
-                    )
-                    
+                    widgetMonitorData: root.monitorData
+                    scale: root.scale
                     availableWorkspaceWidth: root.workspaceImplicitWidth
                     availableWorkspaceHeight: root.workspaceImplicitHeight
                     widgetMonitorId: root.monitor.id
+                    recaptureToken: root.previewRecaptureToken
 
                     property bool atInitPosition: (initX == x && initY == y)
 
-                    property int workspaceColIndex: (windowData?.workspace.id - 1) % Config.options.overview.columns
-                    property int workspaceRowIndex: Math.floor((windowData?.workspace.id - 1) % root.workspacesShown / Config.options.overview.columns)
+                    property int workspaceColIndex: root.getWorkspaceColumn(windowData?.workspace.id)
+                    property int workspaceRowIndex: root.getWorkspaceRow(windowData?.workspace.id)
                     xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
 
@@ -247,8 +277,8 @@ Item {
                         repeat: false
                         running: false
                         onTriggered: {
-                            window.x = Math.round(Math.max((windowData?.at[0] - (monitor?.x ?? 0) - (monitorData?.reserved?.[0] ?? 0)) * root.scale, 0) + xOffset)
-                            window.y = Math.round(Math.max((windowData?.at[1] - (monitor?.y ?? 0) - (monitorData?.reserved?.[1] ?? 0)) * root.scale, 0) + yOffset)
+                            window.x = Math.round(Math.max((windowData?.at[0] - (monitor?.x ?? 0) - (monitorData?.reserved?.[0] ?? 0)) * root.scale * window.widthRatio, 0) + xOffset)
+                            window.y = Math.round(Math.max((windowData?.at[1] - (monitor?.y ?? 0) - (monitorData?.reserved?.[1] ?? 0)) * root.scale * window.heightRatio, 0) + yOffset)
                         }
                     }
 
@@ -309,9 +339,8 @@ Item {
 
             Rectangle { // Focused workspace indicator
                 id: focusedWorkspaceIndicator
-                property int activeWorkspaceInGroup: monitor.activeWorkspace?.id - (root.workspaceGroup * root.workspacesShown)
-                property int activeWorkspaceRowIndex: Math.floor((activeWorkspaceInGroup - 1) / Config.options.overview.columns)
-                property int activeWorkspaceColIndex: (activeWorkspaceInGroup - 1) % Config.options.overview.columns
+                property int activeWorkspaceRowIndex: root.getWorkspaceRow(root.effectiveActiveWorkspaceId)
+                property int activeWorkspaceColIndex: root.getWorkspaceColumn(root.effectiveActiveWorkspaceId)
                 x: (root.workspaceImplicitWidth + workspaceSpacing) * activeWorkspaceColIndex
                 y: (root.workspaceImplicitHeight + workspaceSpacing) * activeWorkspaceRowIndex
                 z: root.windowZ
