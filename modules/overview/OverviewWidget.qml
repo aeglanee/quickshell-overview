@@ -1011,7 +1011,11 @@ Item {
                         id: dragArea
                         anchors.fill: parent
                         hoverEnabled: true
-                        onEntered: hovered = true
+                        onEntered: {
+                            hovered = true
+                            if (windowData?.workspace?.id > 0)
+                                Hyprland.dispatch(`workspace ${windowData.workspace.id}`)
+                        }
                         onExited: hovered = false
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                         drag.target: parent
