@@ -271,7 +271,6 @@ Item {
 
     function specialWorkspaceGeometry(name, monitorId) {
         const trimmedName = `${name ?? ""}`.trim();
-        const currentMonitorId = monitorId ?? -1;
         let minX = null;
         let minY = null;
         let maxX = null;
@@ -279,8 +278,6 @@ Item {
 
         for (const addr in windowByAddress) {
             const win = windowByAddress[addr];
-            if ((win?.monitor ?? -1) !== currentMonitorId)
-                continue;
             if (root.specialWorkspaceName(win) !== trimmedName)
                 continue;
 
@@ -690,8 +687,6 @@ Item {
                                                 return ToplevelManager.toplevels.values.filter((toplevel) => {
                                                     const address = `0x${toplevel.HyprlandToplevel.address}`;
                                                     const win = windowByAddress[address];
-                                                    if ((win?.monitor ?? -1) !== (root.monitor?.id ?? -1))
-                                                        return false;
                                                     return root.specialWorkspaceName(win) === specialWorkspaceTile.specialName;
                                                 }).sort((a, b) => {
                                                     const addrA = `0x${a.HyprlandToplevel.address}`;
