@@ -510,6 +510,10 @@ Item {
                                 id: workspaceArea
                                 anchors.fill: parent
                                 acceptedButtons: Qt.LeftButton
+                                hoverEnabled: true
+                                onEntered: {
+                                    Hyprland.dispatch(`workspace ${workspaceValue}`)
+                                }
                                 onClicked: {
                                     if (root.draggingTargetWorkspace === -1) {
                                         GlobalStates.overviewOpen = false
