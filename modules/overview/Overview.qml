@@ -40,7 +40,6 @@ Scope {
             HyprlandFocusGrab {
                 id: grab
                 windows: [root]
-                property bool canBeActive: root.monitorIsFocused
                 active: false
                 onCleared: () => {
                     if (!active)
@@ -62,8 +61,6 @@ Scope {
                 interval: Config.options.hacks.arbitraryRaceConditionDelay
                 repeat: false
                 onTriggered: {
-                    if (!grab.canBeActive)
-                        return;
                     grab.active = GlobalStates.overviewOpen;
                 }
             }

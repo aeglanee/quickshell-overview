@@ -76,8 +76,6 @@ Item {
             const name = `${ws?.name ?? ""}`;
             if (!name.startsWith("special:"))
                 continue;
-            if (`${ws?.monitor ?? ""}` !== `${root.monitor?.name ?? ""}`)
-                continue;
             names.push(name.slice(8));
         }
         return names;
@@ -87,8 +85,6 @@ Item {
         const names = [];
         for (const addr in windowByAddress) {
             const win = windowByAddress[addr];
-            if ((win?.monitor ?? -1) !== (root.monitor?.id ?? -1))
-                continue;
             const wsName = `${win?.workspace?.name ?? ""}`;
             if (!wsName.startsWith("special:"))
                 continue;
