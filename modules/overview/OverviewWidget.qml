@@ -509,14 +509,15 @@ Item {
                             MouseArea {
                                 id: workspaceArea
                                 anchors.fill: parent
-                                acceptedButtons: Qt.LeftButton
-                                hoverEnabled: true
-                                onEntered: {
-                                    Hyprland.dispatch(`workspace ${workspaceValue}`)
-                                }
-                                onClicked: {
-                                    if (root.draggingTargetWorkspace === -1) {
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onClicked: (mouse) => {
+                                    if (root.draggingTargetWorkspace !== -1)
+                                        return;
+                                    if (mouse.button === Qt.LeftButton) {
                                         GlobalStates.overviewOpen = false
+                                        Hyprland.dispatch(`workspace ${workspaceValue}`)
+                                    } else if (mouse.button === Qt.RightButton) {
+                                        // Select workspace without closing overview
                                         Hyprland.dispatch(`workspace ${workspaceValue}`)
                                     }
                                 }
@@ -1011,13 +1012,9 @@ Item {
                         id: dragArea
                         anchors.fill: parent
                         hoverEnabled: true
-                        onEntered: {
-                            hovered = true
-                            if (windowData?.workspace?.id > 0)
-                                Hyprland.dispatch(`workspace ${windowData.workspace.id}`)
-                        }
+                        onEntered: hovered = true
                         onExited: hovered = false
-                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                         drag.target: parent
                         onPressed: (mouse) => {
                             root.draggingFromWorkspace = windowData?.workspace.id
@@ -1063,6 +1060,10 @@ Item {
                                 event.accepted = true
                             } else if (event.button === Qt.MiddleButton) {
                                 Hyprland.dispatch(`closewindow address:${windowData.address}`)
+                                event.accepted = true
+                            } else if (event.button === Qt.RightButton) {
+                                if (windowData?.workspace?.id > 0)
+                                    Hyprland.dispatch(`workspace ${windowData.workspace.id}`)
                                 event.accepted = true
                             }
                         }
