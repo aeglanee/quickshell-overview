@@ -294,7 +294,6 @@ Item {
 
     function specialWorkspaceGeometry(name, monitorId) {
         const trimmedName = `${name ?? ""}`.trim();
-        const currentMonitorId = monitorId ?? -1;
         let minX = null;
         let minY = null;
         let maxX = null;
@@ -302,8 +301,8 @@ Item {
 
         for (const addr in windowByAddress) {
             const win = windowByAddress[addr];
-            if ((win?.monitor ?? -1) !== currentMonitorId)
-                continue;
+            // Show special-workspace windows on every monitor's overview, not just
+            // the monitor they were toggled on (no per-monitor filter).
             if (root.specialWorkspaceName(win) !== trimmedName)
                 continue;
 
@@ -748,8 +747,7 @@ Item {
                                                 return ToplevelManager.toplevels.values.filter((toplevel) => {
                                                     const address = `0x${toplevel.HyprlandToplevel.address}`;
                                                     const win = windowByAddress[address];
-                                                    if ((win?.monitor ?? -1) !== (root.monitor?.id ?? -1))
-                                                        return false;
+                                                    // No per-monitor filter: special-workspace windows render on every monitor.
                                                     return root.specialWorkspaceName(win) === specialWorkspaceTile.specialName;
                                                 }).sort((a, b) => {
                                                     const addrA = `0x${a.HyprlandToplevel.address}`;
